@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phòng thử loading FRANK DEVELOP</title>
+    <link rel="icon" href="icons/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="theme-color" content="#05040a" />
+    <!--
+      Playground của bộ kit loading: chọn bản 3D / Ảnh / 2D hoặc so sánh cả 3, chạy các tình huống và xem chỉ số.
+      Mỗi bản chạy trong một iframe (playground-frame.html?v=...) vì một trang chỉ nạp được một bản spinner.
+      Trang cha và khung nói chuyện bằng postMessage, nên chạy được cả khi mở thẳng bằng file:// lẫn qua http.
+      Tự chứa: không thư viện, không CDN, không font ngoài.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --night: #05040a;
+        --panel: #0e0b16;
+        --raise: #17131f;
+        --line: #2c2537;
+        --line-strong: #4a4058;
+        --text: #ece6da;
+        --muted: #a9a1b5;
+        --gold: #e2b65e;
+        --gold-soft: rgba(226, 182, 94, 0.14);
+        --jade: #8fe0bd;
+        --warn: #f2c46b;
+        --bad: #ff9a8f;
+        --r-lg: 14px;
+        --r-md: 10px;
+        --r-sm: 6px;
+        --serif: 'Palatino Linotype', Palatino, 'Book Antiqua', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
+        --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { -webkit-text-size-adjust: 100%; }
+      body {
+        margin: 0;
+        background: var(--night);
+        color: var(--text);
+        font: 15px/1.5 var(--sans);
+        overflow-x: clip;
+      }
+      a { color: var(--jade); }
+      :focus-visible { outline: 2px solid var(--jade); outline-offset: 2px; }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+      /* ---------- đầu trang ---------- */
+      header.top {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 24px;
+        align-items: end;
+        padding: 24px 24px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      h1 {
+        margin: 0;
+        font: 600 clamp(1.45rem, 1.1rem + 1.2vw, 2rem) / 1.15 var(--serif);
+        letter-spacing: 0.01em;
+        color: var(--gold);
+      }
+      .lede { margin: 6px 0 0; max-width: 62ch; color: var(--muted); }
+      .top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+      /* ---------- chọn bản: thanh "cân nặng" theo dung lượng file ---------- */
+      .variants {
+        margin: 0;
+        padding: 16px 24px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+      .tile { position: relative; display: block; cursor: pointer; }
+      .tile input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+      .tile .face {
+        display: grid;
+        gap: 2px;
+        min-height: 100%;
+        padding: 12px 14px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-md);
+        background: var(--panel);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+      }
+      .tile:hover .face { border-color: var(--line-strong); }
+      .tile input:focus-visible + .face { outline: 2px solid var(--jade); outline-offset: 2px; }
+      .tile input:checked + .face { border-color: var(--gold); background: var(--gold-soft); }
+      .tile .name { font: 600 1.15rem/1.2 var(--serif); }
+      .tile input:checked + .face .name { color: var(--gold); }
+      .tile .desc { color: var(--muted); font-size: 13.5px; }
+      .weight { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+      .weight .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+      .weight .bar i { display: block; height: 100%; border-radius: 3px; background: var(--gold); }
+      .tile .check { position: absolute; top: 10px; right: 12px; width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-strong); }
+      .tile input:checked ~ .check { border-color: var(--gold); background: radial-gradient(circle, var(--gold) 0 4px, transparent 5px); }
+
+      /* ---------- bố cục chính ---------- */
+      .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); align-items: start; }
+      aside.controls {
+        position: sticky;
+        top: 0;
+        max-height: 100vh;
+        overflow-y: auto;
+        padding: 16px 20px 32px 24px;
+        border-right: 1px solid var(--line);
+        scrollbar-width: thin;
+      }
+      .stage { padding: 16px 24px 32px; min-width: 0; }
+
+      /* ---------- bảng điều khiển ---------- */
+      .group { margin: 0 0 12px; padding: 0 0 14px; border: 0; border-bottom: 1px solid var(--line); min-width: 0; }
+      .group:last-child { border-bottom: 0; }
+      .group legend { padding: 0; margin: 0 0 8px; font: 600 1.02rem/1.3 var(--serif); color: var(--gold); float: left; width: 100%; }
+      .group legend + * { clear: left; }
+      .field { display: grid; gap: 4px; margin: 0 0 10px; }
+      .field-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+      .field label, .field .lbl { font-size: 14px; }
+      output { font-variant-numeric: tabular-nums; color: var(--jade); font-size: 14px; }
+      .hint { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+      input[type='range'] { width: 100%; height: 28px; margin: 0; accent-color: var(--gold); background: transparent; cursor: pointer; }
+      .seg { display: flex; flex-wrap: wrap; gap: 6px; border: 0; padding: 0; margin: 0; }
+      .seg label { position: relative; cursor: pointer; }
+      .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+      .seg span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-sm);
+        font-size: 14px;
+        background: var(--panel);
+      }
+      .seg label:hover span { border-color: var(--line-strong); }
+      .seg input:checked + span { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+      .seg input:focus-visible + span { outline: 2px solid var(--jade); outline-offset: 2px; }
+      .switch { display: flex; align-items: center; gap: 10px; min-height: 36px; cursor: pointer; font-size: 14px; }
+      .switch input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); cursor: pointer; }
+      .switch.off { color: var(--muted); cursor: not-allowed; }
+      .switch.off input { cursor: not-allowed; }
+      button {
+        font: inherit;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 40px;
+        padding: 8px 14px;
+        border-radius: var(--r-sm);
+        border: 1px solid var(--line-strong);
+        background: var(--raise);
+        color: var(--text);
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+      }
+      button:hover { border-color: var(--gold); }
+      button:active { transform: translateY(1px); }
+      button.primary { background: var(--gold); border-color: var(--gold); color: #1b1408; font-weight: 600; }
+      button.primary:hover { background: #ecc77c; }
+      .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+      .btns button { flex: 1 1 auto; }
+
+      /* ---------- khung xem ---------- */
+      .panes { display: grid; gap: 16px; }
+      .panes.all { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .pane { display: grid; gap: 10px; min-width: 0; align-content: start; }
+      .pane-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+      .pane-head h2 { margin: 0; font: 600 1.1rem/28px var(--serif); height: 28px; overflow: hidden; }
+      .pane-head .file { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; text-align: right; }
+      .frame-wrap { position: relative; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--panel); }
+      .frame-wrap iframe { display: block; width: 100%; height: min(70vh, 620px); border: 0; }
+      .panes.all .frame-wrap iframe { height: min(64vh, 560px); }
+      .panes.all .pane-head .file { display: none; }
+
+      .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--line); }
+      .panes.single .metrics { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      .panes.all .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .compare-note { margin: 0 0 12px; max-width: 72ch; color: var(--muted); font-size: 14px; }
+      .compare-note[hidden] { display: none; }
+      .metric { padding: 8px 10px; background: var(--panel); min-width: 0; }
+      .metric dt { font-size: 12.5px; color: var(--muted); }
+      .metric dd { margin: 2px 0 0; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+      .metric dd small { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); }
+      .metric .big { font: 600 1.6rem/1.1 var(--serif); }
+      .q-good { color: var(--jade); }
+      .q-mid { color: var(--warn); }
+      .q-bad { color: var(--bad); }
+
+      details.log { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+      details.log summary { cursor: pointer; padding: 8px 12px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; min-height: 40px; align-items: center; }
+      details.log ol { list-style: none; margin: 0; padding: 0 12px 10px; max-height: 190px; overflow-y: auto; font-size: 13px; }
+      details.log li { display: grid; grid-template-columns: 4.6em minmax(0, 1fr); gap: 8px; padding: 4px 0; border-top: 1px solid var(--line); }
+      details.log li time { color: var(--muted); font-variant-numeric: tabular-nums; }
+      details.log li.call span { color: var(--gold); }
+      details.log li.done span { color: var(--jade); }
+      details.log li.warn span, details.log li.err span { color: var(--bad); }
+      details.log .empty { color: var(--muted); padding: 6px 0; border: 0; display: block; }
+
+      .guide { margin: 20px 0 0; max-width: 72ch; color: var(--muted); font-size: 14px; }
+      .guide summary { cursor: pointer; color: var(--text); font-weight: 600; min-height: 40px; display: flex; align-items: center; }
+      .guide dl { margin: 4px 0 0; }
+      .guide dt { color: var(--text); margin-top: 10px; }
+      .guide dd { margin: 2px 0 0; }
+
+      /* ---------- màn hình hẹp ---------- */
+      @media (max-width: 1180px) {
+        .panes.single .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+      @media (max-width: 1020px) {
+        .layout { grid-template-columns: minmax(0, 1fr); }
+        .stage { order: -1; }
+        aside.controls { position: static; max-height: none; overflow: visible; border-right: 0; border-top: 1px solid var(--line); padding: 16px; }
+        .variants { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px 16px; }
+        header.top { padding: 16px; grid-template-columns: minmax(0, 1fr); }
+        .stage { padding: 12px 16px 16px; }
+        .panes.all { grid-template-columns: minmax(0, 1fr); }
+        /* xem một bản: khung xem dính ở trên, cuộn bảng điều khiển bên dưới */
+        .stage.sticky { position: sticky; top: 0; z-index: 5; background: var(--night); border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+        .stage.sticky .frame-wrap iframe { height: 36svh; min-height: 240px; }
+        .stage.sticky .pane-head { display: none; }
+        .stage.sticky .metric dd small { display: none; }
+        .stage.sticky .metric .big { font-size: 1.2rem; }
+        .stage.sticky .pane { gap: 8px; }
+        .stage.sticky .guide { display: none; }
+        .panes.all .frame-wrap iframe { height: 440px; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 24px; }
+      }
+      @media (max-width: 520px) {
+        .tile .desc { display: none; }
+        .metric { padding: 6px 8px; }
+        .metric .big { font-size: 1.3rem; }
+        .stage.sticky details.log ol { max-height: 96px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>Phòng thử loading FRANK DEVELOP</h1>
+        <p class="lede">Chọn một bản spinner, bấm các tình huống trong bảng điều khiển và xem chỉ số dưới khung: chạy có mượt không, tải mất bao lâu, dừng có đúng lúc không.</p>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="reload" title="Nạp lại khung để đo lại thời gian tải">Nạp lại khung</button>
+        <button type="button" id="reset">Đặt lại chỉ số</button>
+      </div>
+    </header>
+
+    <fieldset class="variants" id="variants">
+      <legend class="sr-only">Bản đang xem</legend>
+      <label class="tile">
+        <input type="radio" name="mode" value="3d" />
+        <span class="face">
+          <span class="name">3D</span>
+          <span class="desc">WebGL thật: quầng sáng, hạt, sét. Đẹp nhất, tốn GPU.</span>
+          <span class="weight"><span class="bar"><i style="width: 100%"></i></span>≈ 1,1 MB</span>
+        </span>
+        <span class="check" aria-hidden="true"></span>
+      </label>
+      <label class="tile">
+        <input type="radio" name="mode" value="img" />
+        <span class="face">
+          <span class="name">Ảnh</span>
+          <span class="desc">Lớp ảnh render từ cảnh 3D, không WebGL.</span>
+          <span class="weight"><span class="bar"><i style="width: 46%"></i></span>≈ 510 kB</span>
+        </span>
+        <span class="check" aria-hidden="true"></span>
+      </label>
+      <label class="tile">
+        <input type="radio" name="mode" value="2d" />
+        <span class="face">
+          <span class="name">2D</span>
+          <span class="desc">Vẽ bằng SVG, nhẹ nhất, hiện gần như tức thì.</span>
+          <span class="weight"><span class="bar"><i style="width: 6%"></i></span>≈ 60 kB</span>
+        </span>
+        <span class="check" aria-hidden="true"></span>
+      </label>
+      <label class="tile">
+        <input type="radio" name="mode" value="all" />
+        <span class="face">
+          <span class="name">So sánh cả 3</span>
+          <span class="desc">Ba khung cạnh nhau, cùng nhận một lệnh.</span>
+          <span class="weight">Tổng ≈ 1,7 MB</span>
+        </span>
+        <span class="check" aria-hidden="true"></span>
+      </label>
+    </fieldset>
+
+    <div class="layout">
+      <aside class="controls" aria-label="Bảng điều khiển">
+        <form id="ctl" class="controls-grid" onsubmit="return false">
+          <fieldset class="group">
+            <legend>Nền trang</legend>
+            <div class="seg" role="radiogroup" aria-label="Nền trang trong khung">
+              <label><input type="radio" name="bg" value="light" checked /><span>Sáng</span></label>
+              <label><input type="radio" name="bg" value="dark" /><span>Tối</span></label>
+            </div>
+            <p class="hint">Xem spinner trên cả hai nền trước khi chọn.</p>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend>Spinner mẫu</legend>
+            <div class="field">
+              <div class="field-head"><label for="size">Cỡ</label><output id="size-out" for="size">160 px</output></div>
+              <input type="range" id="size" name="size" min="24" max="480" step="4" value="160" />
+            </div>
+            <div class="field">
+              <span class="lbl" id="bd-lbl">Nền tròn (backdrop)</span>
+              <div class="seg" role="radiogroup" aria-labelledby="bd-lbl">
+                <label><input type="radio" name="backdrop" value="dark" checked /><span>Mề đay tối</span></label>
+                <label><input type="radio" name="backdrop" value="none" /><span>Không nền</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="speed">Tốc độ</label><output id="speed-out" for="speed">1×</output></div>
+              <input type="range" id="speed" name="speed" min="0.25" max="3" step="0.25" value="1" />
+            </div>
+            <div class="field">
+              <label class="switch" id="lightning-wrap"><input type="checkbox" id="lightning" name="lightning" checked aria-describedby="lightning-hint" /> Sét quanh vòng</label>
+              <p class="hint" id="lightning-hint">Chỉ bản 3D có sét.</p>
+            </div>
+            <div class="btns">
+              <button type="button" class="primary" data-cmd="done">Gọi done()</button>
+              <button type="button" data-cmd="restart">Chạy lại</button>
+            </div>
+            <p class="hint">done(): các vòng giảm tốc rồi dừng, logo chớp sáng.</p>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend>Phủ cả trang</legend>
+            <div class="field">
+              <div class="field-head"><label for="cover-ms">Thời gian chờ</label><output id="cover-out" for="cover-ms">3 s</output></div>
+              <input type="range" id="cover-ms" min="500" max="8000" step="500" value="3000" />
+            </div>
+            <div class="btns">
+              <button type="button" class="primary" data-cmd="overlay">Phủ cả trang</button>
+              <button type="button" id="auto">Nạp lại với data-auto</button>
+            </div>
+            <p class="hint">"Nạp lại với data-auto" mở lại khung như trang thật vừa tải: lớp phủ tự rời đi khi tải xong, hiện ít nhất bằng thời gian chờ ở trên.</p>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend>Tải thẻ</legend>
+            <div class="field">
+              <div class="field-head"><label for="card-ms">Độ trễ giả lập</label><output id="card-out" for="card-ms">2,5 s</output></div>
+              <input type="range" id="card-ms" min="500" max="8000" step="500" value="2500" />
+            </div>
+            <div class="btns">
+              <button type="button" class="primary" data-cmd="card">Tải thẻ</button>
+              <button type="button" data-cmd="button">Bấm nút Lưu</button>
+            </div>
+            <p class="hint">Tải thẻ: spinner phủ thẻ, chờ xong thì done({ hide: true }). Nút Lưu: spinner nhỏ trong nút trong 2 s.</p>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend>Huy hiệu</legend>
+            <div class="field">
+              <span class="lbl" id="badge-lbl">Vị trí</span>
+              <div class="seg" role="radiogroup" aria-labelledby="badge-lbl">
+                <label><input type="radio" name="badge" value="none" /><span>Ẩn</span></label>
+                <label><input type="radio" name="badge" value="top-left" /><span>Trên trái</span></label>
+                <label><input type="radio" name="badge" value="top-right" /><span>Trên phải</span></label>
+                <label><input type="radio" name="badge" value="bottom-left" /><span>Dưới trái</span></label>
+                <label><input type="radio" name="badge" value="bottom-right" checked /><span>Dưới phải</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <div class="field-head"><label for="badge-size">Cỡ huy hiệu</label><output id="badge-out" for="badge-size">72 px</output></div>
+              <input type="range" id="badge-size" min="40" max="160" step="4" value="72" />
+            </div>
+            <p class="hint">Rê chuột (hoặc Tab tới) huy hiệu trong khung: nó nổi lên và các vòng quay nhanh hơn.</p>
+          </fieldset>
+        </form>
+      </aside>
+
+      <main class="stage" id="stage">
+        <p class="compare-note" id="compare-note" hidden>Ba khung chạy chung một luồng của trình duyệt: khi khung 3D đang dựng cảnh hoặc phủ toàn màn hình, FPS của cả ba cùng tụt. Muốn đo FPS chính xác cho từng bản, hãy xem riêng từng bản.</p>
+        <div class="panes" id="panes"></div>
+        <details class="guide">
+          <summary>Đọc chỉ số thế nào?</summary>
+          <dl>
+            <dt>FPS và FPS thấp nhất</dt>
+            <dd>Số khung hình mỗi giây trong khung, đo mỗi nửa giây. 50 trở lên là mượt, 30–49 là tạm, dưới 30 là thấy giật. "Thấp nhất" giữ con số tệ nhất từ lần đặt lại gần nhất, bỏ qua 1,5 s đầu khi khung vừa mở và 1,2 s sau mỗi lần tạo spinner mới (lúc dựng được tính riêng ở "Khung giật").</dd>
+            <dt>Khung giật</dt>
+            <dd>Số lần một khung hình mất hơn 50 ms, kèm khung lâu nhất. Tạo spinner 3D mới thường gây 1–3 lần (dựng cảnh WebGL), đó là bình thường; nếu số này tăng đều khi spinner đang quay thì là giật thật.</dd>
+            <dt>Tải script</dt>
+            <dd>Thời gian tải file spinner, và dung lượng đo được. Mở bằng file:// thì trình duyệt không cho biết dung lượng, trang hiện số ước tính theo bản build. Qua http, lần nạp sau có thể lấy từ bộ nhớ đệm nên nhanh hơn lần đầu.</dd>
+            <dt>Canvas WebGL</dt>
+            <dd>Chỉ bản 3D dùng. Mỗi spinner 3D là một canvas; trình duyệt giới hạn khoảng 16 canvas cùng lúc, nên dùng thật chỉ nên có 1–2.</dd>
+            <dt>Spinner xám có chữ "© FRANK DEVELOP"</dt>
+            <dd>Trang đang mở ở tên miền không được phép. Đó là khoá tên miền hoạt động đúng; localhost, 127.0.0.1 và file:// luôn hiện màu bình thường.</dd>
+          </dl>
+        </details>
+      </main>
+    </div>
+
+    <template id="pane-tpl">
+      <section class="pane">
+        <div class="pane-head"><h2></h2><span class="file"></span></div>
+        <div class="frame-wrap"><iframe loading="eager"></iframe></div>
+        <dl class="metrics">
+          <div class="metric"><dt>FPS</dt><dd><span class="big" data-m="fps">…</span><small data-m="fpsq">đang đo</small></dd></div>
+          <div class="metric"><dt>FPS thấp nhất</dt><dd data-m="min">…</dd></div>
+          <div class="metric"><dt>Khung giật</dt><dd data-m="jank">0</dd></div>
+          <div class="metric"><dt>Tải script</dt><dd data-m="load">…</dd></div>
+          <div class="metric"><dt>Spinner</dt><dd data-m="spin">…</dd></div>
+          <div class="metric"><dt>Canvas WebGL</dt><dd data-m="gl">…</dd></div>
+        </dl>
+        <details class="log">
+          <summary><span>Nhật ký sự kiện</span><span class="count" data-m="count">0</span></summary>
+          <ol role="log" aria-live="off"><li class="empty">Chưa có sự kiện. Bấm một tình huống để bắt đầu.</li></ol>
+        </details>
+      </section>
+    </template>
+
+    <script>
+      (function () {
+        var V = {
+          '3d': { name: '3D', full: 'Bản 3D (WebGL)', file: 'frank-seal-spinner-3d.js', badge: 'frank-badge.js', est: 1.1e6 },
+          img: { name: 'Ảnh', full: 'Bản ảnh', file: 'frank-seal-spinner.js', badge: 'frank-badge.js', est: 5.1e5 },
+          '2d': { name: '2D', full: 'Bản 2D (SVG)', file: 'frank-seal-spinner-2d.js', badge: 'frank-badge-2d.js', est: 6e4 },
+        };
+        var $ = function (s, r) { return (r || document).querySelector(s); };
+        var nf = function (n, d) { return Number(n).toLocaleString('vi-VN', { maximumFractionDigits: d || 0, minimumFractionDigits: 0 }); };
+        var bytes = function (b) { return b >= 1e6 ? nf(b / 1e6, 2) + ' MB' : nf(b / 1e3, 0) + ' kB'; };
+        var secs = function (ms) { return nf(ms / 1000, 1) + ' s'; };
+
+        var form = $('#ctl');
+        var state = { bg: 'light', size: 160, backdrop: 'dark', speed: 1, lightning: true, badge: 'bottom-right', badgeSize: 72 };
+        var panes = []; // { v, iframe, el, log: [] }
+        var mode = ({ '3d': 1, img: 1, '2d': 1, all: 1 })[location.hash.slice(1)] ? location.hash.slice(1) : '3d';
+
+        function frameSrc(v, auto) {
+          var q = 'v=' + v + '&bg=' + state.bg;
+          if (auto) q += '&auto=1&min=' + $('#cover-ms').value;
+          return 'playground-frame.html?' + q;
+        }
+
+        function build(auto) {
+          var box = $('#panes');
+          box.textContent = '';
+          box.className = 'panes ' + (mode === 'all' ? 'all' : 'single');
+          $('#stage').classList.toggle('sticky', mode !== 'all');
+          $('#compare-note').hidden = mode !== 'all';
+          panes = (mode === 'all' ? ['3d', 'img', '2d'] : [mode]).map(function (v) {
+            var el = $('#pane-tpl').content.firstElementChild.cloneNode(true);
+            $('h2', el).textContent = V[v].full;
+            $('.file', el).textContent = V[v].file;
+            var iframe = $('iframe', el);
+            iframe.title = 'Khung thử ' + V[v].full;
+            iframe.src = frameSrc(v, auto);
+            box.appendChild(el);
+            var p = { v: v, iframe: iframe, el: el, log: [] };
+            if (v !== '3d') $('[data-m="gl"]', el).textContent = 'Không dùng';
+            return p;
+          });
+          syncLightning();
+        }
+
+        function syncLightning() {
+          var has = mode === '3d' || mode === 'all';
+          var box = $('#lightning');
+          box.disabled = !has;
+          $('#lightning-wrap').classList.toggle('off', !has);
+          $('#lightning-hint').textContent = mode === 'all' ? 'Chỉ áp dụng cho khung 3D.' : has ? 'Tắt sét để xem vòng gọn hơn, nhẹ GPU hơn.' : 'Bản này không có sét, chỉ bản 3D có.';
+        }
+
+        function send(p, msg) { msg.fd = 1; if (p.iframe.contentWindow) p.iframe.contentWindow.postMessage(msg, '*'); }
+        function sendAll(msg) { panes.forEach(function (p) { send(p, Object.assign({}, msg)); }); }
+
+        /* ---------- tin nhắn từ khung ---------- */
+        window.addEventListener('message', function (e) {
+          var m = e.data;
+          if (!m || m.fd !== 1) return;
+          var p = panes.filter(function (x) { return x.iframe.contentWindow === e.source; })[0];
+          if (!p) return;
+          if (m.type === 'ready') send(p, { cmd: 'state', state: state, first: true });
+          else if (m.type === 'metrics') showMetrics(p, m);
+          else if (m.type === 'load') showLoad(p, m);
+          else if (m.type === 'log') addLog(p, m.at, m.text, m.kind);
+        });
+
+        function q(fps) { return fps >= 50 ? ['q-good', 'mượt'] : fps >= 30 ? ['q-mid', 'tạm'] : ['q-bad', 'giật']; }
+        function set(p, key, html) { var n = $('[data-m="' + key + '"]', p.el); if (n && n.innerHTML !== html) n.innerHTML = html; }
+        function showMetrics(p, m) {
+          var a = q(m.fps);
+          var fpsEl = $('[data-m="fps"]', p.el);
+          fpsEl.textContent = nf(m.fps);
+          fpsEl.className = 'big ' + a[0];
+          set(p, 'fpsq', a[1]);
+          if (m.minFps == null) set(p, 'min', '<span>đang chờ</span><small>chưa đủ dữ liệu</small>');
+          else { var b = q(m.minFps); set(p, 'min', '<span class="' + b[0] + '">' + nf(m.minFps) + '</span><small>' + b[1] + '</small>'); }
+          set(p, 'jank', nf(m.jank) + '<small>' + (m.worst > 0 ? 'lâu nhất ' + nf(m.worst) + ' ms' : 'khung &gt; 50 ms') + '</small>');
+          set(p, 'spin', nf(m.busy) + ' đang quay<small>' + (m.spinners - m.busy > 0 ? nf(m.spinners - m.busy) + ' đã dừng, ' : '') + 'tổng ' + nf(m.spinners) + '</small>');
+          if (p.v === '3d') set(p, 'gl', nf(m.canvases) + '<small>' + (m.canvases > 3 ? 'nhiều, nên bớt' : 'mỗi spinner một canvas') + '</small>');
+          else set(p, 'gl', 'Không dùng<small>không WebGL</small>');
+          if (m.licensed === false && !p.warnedLic) { p.warnedLic = true; addLog(p, '', 'Spinner xám: tên miền này không được phép (khoá tên miền hoạt động đúng).', 'warn'); }
+        }
+        function showLoad(p, m) {
+          if (m.error) { set(p, 'load', '<span class="q-bad">Lỗi</span><small>' + m.error + '</small>'); addLog(p, '', m.error, 'err'); return; }
+          var r = m.spinner;
+          var t = r && r.duration > 0 ? r.duration : m.spinnerReady;
+          var size;
+          if (r && r.transfer > 0) size = bytes(r.transfer) + ' qua mạng';
+          else if (r && r.decoded > 0) size = bytes(r.decoded) + (m.protocol === 'file:' ? '' : ', từ bộ nhớ đệm');
+          else size = '≈ ' + bytes(V[p.v].est) + ', ước tính';
+          set(p, 'load', (t != null ? nf(t) + ' ms' : 'không đo được') + '<small>' + size + '</small>');
+          addLog(p, '', 'Đã nạp ' + m.files.spinner + (t != null ? ' trong ' + nf(t) + ' ms' : '') + (m.auto ? ', có data-auto' : ''));
+        }
+        function addLog(p, at, text, kind) {
+          p.log.unshift({ at: at, text: text, kind: kind || 'info' });
+          if (p.log.length > 60) p.log.pop();
+          var ol = $('ol', p.el);
+          var li = document.createElement('li');
+          li.className = kind || 'info';
+          var tm = document.createElement('time');
+          tm.textContent = at || '';
+          var sp = document.createElement('span');
+          sp.textContent = text;
+          li.append(tm, sp);
+          var empty = $('.empty', ol);
+          if (empty) empty.remove();
+          ol.prepend(li);
+          while (ol.children.length > 60) ol.lastChild.remove();
+          set(p, 'count', nf(ol.children.length));
+        }
+
+        /* ---------- điều khiển ---------- */
+        function readState() {
+          var f = new FormData(form);
+          return {
+            bg: f.get('bg'),
+            size: Number(f.get('size')),
+            backdrop: f.get('backdrop'),
+            speed: Number(f.get('speed')),
+            lightning: $('#lightning').checked,
+            badge: f.get('badge'),
+            badgeSize: Number($('#badge-size').value),
+          };
+        }
+        function outputs() {
+          $('#size-out').textContent = $('#size').value + ' px';
+          $('#speed-out').textContent = nf($('#speed').value, 2) + '×';
+          $('#cover-out').textContent = secs($('#cover-ms').value);
+          $('#card-out').textContent = secs($('#card-ms').value);
+          $('#badge-out').textContent = $('#badge-size').value + ' px';
+        }
+        function push() { state = readState(); sendAll({ cmd: 'state', state: state }); }
+
+        // cỡ và cỡ huy hiệu áp dụng ngay khi kéo; tốc độ chỉ áp dụng khi thả (bản 3D phải dựng lại cảnh)
+        form.addEventListener('input', function (e) {
+          outputs();
+          if (e.target.id === 'size') push();
+        });
+        form.addEventListener('change', function (e) {
+          if (e.target.id === 'cover-ms' || e.target.id === 'card-ms') return;
+          push();
+        });
+
+        document.querySelectorAll('[data-cmd]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            var cmd = b.getAttribute('data-cmd');
+            var msg = { cmd: cmd };
+            if (cmd === 'overlay') msg.ms = Number($('#cover-ms').value);
+            if (cmd === 'card') msg.ms = Number($('#card-ms').value);
+            sendAll(msg);
+          });
+        });
+
+        $('#variants').addEventListener('change', function (e) {
+          mode = e.target.value;
+          try { history.replaceState(null, '', '#' + mode); } catch (err) { /* file:// cũ có thể chặn, bỏ qua */ }
+          build(false);
+        });
+        // sửa địa chỉ (#3d, #img, #2d, #all) hoặc bấm Quay lại cũng đổi bản
+        window.addEventListener('hashchange', function () {
+          var h = location.hash.slice(1);
+          if (!({ '3d': 1, img: 1, '2d': 1, all: 1 })[h] || h === mode) return;
+          mode = h;
+          document.querySelector('#variants input[value="' + h + '"]').checked = true;
+          build(false);
+        });
+        $('#reload').addEventListener('click', function () { build(false); });
+        $('#auto').addEventListener('click', function () { build(true); });
+        $('#reset').addEventListener('click', function () {
+          sendAll({ cmd: 'reset' });
+          panes.forEach(function (p) {
+            p.log = [];
+            $('ol', p.el).innerHTML = '<li class="empty">Đã xoá nhật ký.</li>';
+            set(p, 'count', '0');
+          });
+        });
+
+        var radio = form.ownerDocument.querySelector('#variants input[value="' + mode + '"]');
+        radio.checked = true;
+        // nhật ký mở sẵn trên màn hình rộng
+        var wide = matchMedia('(min-width: 1021px)');
+        $('#pane-tpl').content.querySelector('details.log').open = wide.matches;
+        outputs();
+        state = readState();
+        build(false);
+      })();
+    </script>
+  </body>
+</html>

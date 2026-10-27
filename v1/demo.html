@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FRANK DEVELOP kit — demo</title>
+    <!-- icons: copy icons/ and site.webmanifest next to your page -->
+    <link rel="icon" href="icons/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="manifest" href="site.webmanifest" />
+    <meta name="theme-color" content="#05040a" />
+    <style>
+      :root { --bg: #f4f1ea; --fg: #1d1a16; --card: #fffdf8; --line: #d9d2c4; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0f0d14; --fg: #ece6da; --card: #17141e; --line: #2c2735; } }
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 16px/1.6 system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+      main { max-width: 60rem; margin: 0 auto; padding: 32px 16px 120px; }
+      h1 { margin: 0 0 4px; font-size: 1.6rem; }
+      h2 { font-size: 1.05rem; margin: 32px 0 12px; }
+      .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+      .card { position: relative; min-height: 180px; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); overflow: hidden; }
+      .dark { background: #05040a; color: #ece6da; border-color: #2c2735; }
+      button { font: inherit; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: inherit; cursor: pointer; min-height: 40px; }
+      code { font-size: 0.88em; }
+    </style>
+  </head>
+  <body>
+    <!-- whole-page cover while this page loads (leaves on window load, shown at least 1.5 s for the demo);
+         ?2d loads the light vector builds, ?3d the WebGL spinner — same tags, same API -->
+    <script>
+      const Q = new URLSearchParams(location.search);
+      const V = Q.has('3d') ? '-3d' : Q.has('2d') ? '-2d' : '';
+      // the 3D build has no badge of its own: it pairs with the image badge
+      document.write(`<script src="frank-seal-spinner${V}.js" data-auto data-min-duration="1500"><\/script><script src="frank-badge${V === '-3d' ? '' : V}.js"><\/script>`);
+    </script>
+    <main>
+      <h1>FRANK DEVELOP kit</h1>
+      <p>Spinner Hồn Hoàn dùng ở mọi chỗ cần chờ. Mỗi vòng xoay riêng, tới khi gọi <code>done()</code> thì giảm tốc rồi dừng.</p>
+      <p id="variant"></p>
+      <p><a href="playground.html">Mở phòng thử (playground): chọn bản, so sánh cả 3, xem FPS và sự kiện</a></p>
+
+      <h2>Nhiều cỡ</h2>
+      <div class="row">
+        <frank-seal-spinner size="32"></frank-seal-spinner>
+        <frank-seal-spinner size="56"></frank-seal-spinner>
+        <frank-seal-spinner size="96"></frank-seal-spinner>
+        <frank-seal-spinner size="160"></frank-seal-spinner>
+      </div>
+
+      <h2>Trong nút và trong thẻ đang tải</h2>
+      <div class="row">
+        <button id="save">Lưu</button>
+        <button id="reload">Tải lại các thẻ</button>
+        <button id="page">Che cả trang 3 giây</button>
+      </div>
+      <div class="grid" style="margin-top: 16px">
+        <div class="card" id="c1"><strong>Thẻ sáng</strong><p>Nội dung hiện ra sau khi tải xong.</p></div>
+        <div class="card dark" id="c2"><strong>Thẻ tối</strong><p>Trên nền tối có thể bỏ nền tròn: <code>backdrop="none"</code>.</p></div>
+      </div>
+
+      <h2>Huy hiệu</h2>
+      <div class="row">Đặt trong dòng chữ: <frank-badge size="56" href="#"></frank-badge> hoặc cố định ở góc (góc dưới bên phải).</div>
+    </main>
+    <frank-badge href="https://example.com" target="_blank" position="bottom-right"></frank-badge>
+    <script>
+      const NAMES = { '-3d': 'bản 3D (WebGL)', '': 'bản ảnh (render từ cảnh 3D)', '-2d': 'bản 2D (vector, nhẹ)' };
+      document.getElementById('variant').innerHTML =
+        `Đang xem <strong>${NAMES[V]}</strong>. Xem: ` +
+        [['?3d', '-3d'], ['?', ''], ['?2d', '-2d']].filter(([, v]) => v !== V).map(([q, v]) => `<a href="${q}">${NAMES[v]}</a>`).join(' · ') +
+        (V === '-3d' ? '<br><small>Bản 3D dùng một ngữ cảnh WebGL cho mỗi spinner; trang này đặt nhiều cái cùng lúc chỉ để so sánh — khi dùng thật nên chỉ một cái, tốt nhất là lớp phủ cả trang.</small>' : '');
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      // a card that loads: spinner fills it, then spins down and leaves
+      async function loadCard(card, backdrop) {
+        card.querySelector('p').style.visibility = 'hidden';
+        const s = FrankSeal.spinner(card, { backdrop });
+        await wait(2200 + Math.random() * 1200);
+        await s.done({ hide: true });
+        card.querySelector('p').style.visibility = '';
+      }
+      document.getElementById('reload').onclick = () => {
+        loadCard(document.getElementById('c1'));
+        loadCard(document.getElementById('c2'), 'none');
+      };
+      document.getElementById('reload').click();
+      // a button that saves: a small spinner in place of its icon
+      document.getElementById('save').onclick = async (e) => {
+        const b = e.currentTarget;
+        b.disabled = true;
+        const s = FrankSeal.spinner(b, { size: 22, backdrop: 'none' });
+        b.prepend(s);
+        await wait(2000);
+        await s.done({ hide: true });
+        b.disabled = false;
+      };
+      document.getElementById('page').onclick = () => {
+        const cover = FrankSeal.overlay();
+        setTimeout(() => cover.hide(), 3000);
+      };
+    </script>
+  </body>
+</html>

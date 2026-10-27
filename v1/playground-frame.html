@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Khung thử spinner FRANK DEVELOP</title>
+    <link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+    <!--
+      Trang con của playground.html: chạy ĐÚNG MỘT bản spinner (custom element đăng ký toàn cục, không gỡ được).
+      ?v=3d|img|2d   bản cần nạp      ?bg=light|dark   nền trang
+      ?auto=1&min=ms nạp script với data-auto (lớp phủ tự rời đi khi tải xong, hiện ít nhất min ms)
+      Nhận lệnh từ trang cha qua postMessage { fd: 1, cmd, ... } và gửi lại chỉ số { fd: 1, type, ... }.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f2f0f5;
+        --fg: #1b1724;
+        --card: #ffffff;
+        --line: #d6d0df;
+        --muted: #595266;
+        --accent: #6c4f12;
+      }
+      :root[data-bg='dark'] {
+        color-scheme: dark;
+        --bg: #05040a;
+        --fg: #ece6da;
+        --card: #110e19;
+        --line: #2b2535;
+        --muted: #a79fb2;
+        --accent: #e2b65e;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      main { display: grid; gap: 16px; padding: 16px; }
+      .sample {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 220px;
+        padding: 8px 0;
+        overflow: auto;
+      }
+      .sample .note { margin: 0; max-width: 28ch; text-align: center; color: var(--muted); font-size: 14px; }
+      .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+      .card {
+        position: relative;
+        min-height: 150px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--card);
+        overflow: hidden;
+      }
+      .card h2 { margin: 0 0 4px; font-size: 15px; }
+      .card p { margin: 0; color: var(--muted); font-size: 14px; }
+      .card .busy-hide { transition: opacity 0.3s ease; }
+      .card.busy .busy-hide { opacity: 0; }
+      .save {
+        font: inherit;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        margin-top: 12px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: var(--bg);
+        color: var(--fg);
+        cursor: pointer;
+      }
+      .save:hover { border-color: var(--accent); }
+      .save:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      .save:disabled { cursor: progress; opacity: 0.75; }
+      .fail {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid #b3261e;
+        background: #fff1f0;
+        color: #8c1d18;
+      }
+    </style>
+    <script>
+      (function () {
+        var Q = new URLSearchParams(location.search);
+        var v = { '3d': '3d', img: 'img', '2d': '2d' }[Q.get('v')] || '2d';
+        var FILES = {
+          '3d': ['frank-seal-spinner-3d.js', 'frank-badge.js'],
+          img: ['frank-seal-spinner.js', 'frank-badge.js'],
+          '2d': ['frank-seal-spinner-2d.js', 'frank-badge-2d.js'],
+        };
+        var fd = (window.__fd = {
+          v: v,
+          files: { spinner: FILES[v][0], badge: FILES[v][1] },
+          t0: performance.now(),
+          loaded: {},
+          failed: [],
+          queue: [],
+          send: function (msg) {
+            msg.fd = 1;
+            msg.v = v;
+            if (window.parent !== window) window.parent.postMessage(msg, '*');
+          },
+          ok: function (k) { fd.loaded[k] = performance.now(); },
+          fail: function (k) { fd.failed.push(fd.files[k]); },
+        });
+        document.documentElement.dataset.bg = Q.get('bg') === 'dark' ? 'dark' : 'light';
+        var auto = Q.has('auto') ? ' data-auto data-min-duration="' + (Number(Q.get('min')) || 1500) + '"' : '';
+        fd.auto = !!auto;
+        // nạp đồng bộ như một trang thật (data-auto cần chạy trước khi body hiện ra)
+        document.write(
+          '<script src="' + fd.files.spinner + '"' + auto + ' onload="__fd.ok(\'spinner\')" onerror="__fd.fail(\'spinner\')"><\/script>' +
+            '<script src="' + fd.files.badge + '" onload="__fd.ok(\'badge\')" onerror="__fd.fail(\'badge\')"><\/script>',
+        );
+      })();
+    </script>
+  </head>
+  <body>
+    <main>
+      <div class="sample" id="sample" aria-label="Spinner mẫu"></div>
+      <div class="row">
+        <section class="card" id="card" aria-labelledby="card-title">
+          <h2 id="card-title">Thẻ dữ liệu</h2>
+          <p class="busy-hide" id="card-text">Bấm "Tải thẻ" để giả lập tải dữ liệu.</p>
+        </section>
+        <section class="card" aria-labelledby="btn-title">
+          <h2 id="btn-title">Nút đang lưu</h2>
+          <p>Spinner nhỏ thay chỗ biểu tượng trong nút.</p>
+          <button class="save" id="save" type="button">Lưu thay đổi</button>
+        </section>
+      </div>
+    </main>
+    <script>
+      (function () {
+        var fd = window.__fd;
+        var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+        var now = function () { return performance.now(); };
+        var secs = function (t) { return ((t - fd.t0) / 1000).toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' s'; };
+        var log = function (text, kind) { fd.send({ type: 'log', text: text, at: secs(now()), kind: kind || 'info' }); };
+
+        if (fd.failed.length || !window.FrankSeal) {
+          var miss = fd.failed.length ? fd.failed.join(', ') : fd.files.spinner;
+          document.getElementById('sample').innerHTML =
+            '<p class="fail" role="alert">Không nạp được ' + miss + '. Hãy chạy <code>pnpm build:kit</code> rồi mở lại trang trong thư mục dist-kit.</p>';
+          fd.send({ type: 'load', error: 'Không nạp được ' + miss });
+          return;
+        }
+
+        /* ---------- đo tải script ---------- */
+        function resource(file) {
+          var e = performance.getEntriesByType('resource').filter(function (r) { return r.name.split('?')[0].split('/').pop() === file; })[0];
+          if (!e) return null;
+          return { duration: e.duration, transfer: e.transferSize || 0, decoded: e.decodedBodySize || 0, encoded: e.encodedBodySize || 0 };
+        }
+        function loadReport() {
+          var r = resource(fd.files.spinner);
+          var b = resource(fd.files.badge);
+          fd.send({
+            type: 'load',
+            protocol: location.protocol,
+            spinner: r,
+            badge: b,
+            // từ đầu trang tới khi script spinner chạy xong (gồm tải + phân tích + chạy)
+            spinnerReady: fd.loaded.spinner ? fd.loaded.spinner - fd.t0 : null,
+            files: fd.files,
+            auto: fd.auto,
+          });
+        }
+
+        /* ---------- theo dõi done() và frank-done ---------- */
+        var Ctor = customElements.get('frank-seal-spinner');
+        var calls = new WeakMap();
+        var names = new WeakMap();
+        var nameOf = function (el) { var up = el.parentElement; return names.get(el) || (up && getComputedStyle(up).position === 'fixed' ? 'lớp phủ' : 'spinner'); };
+        if (Ctor && Ctor.prototype.done) {
+          var orig = Ctor.prototype.done;
+          Ctor.prototype.done = function (opts) {
+            if (!calls.has(this)) {
+              calls.set(this, now());
+              log('Gọi done() cho ' + nameOf(this) + (opts && opts.hide ? ' (kèm mờ dần, tự gỡ)' : ''), 'call');
+            }
+            return orig.call(this, opts);
+          };
+        }
+        document.addEventListener('frank-done', function (e) {
+          var el = e.target;
+          var t = calls.get(el);
+          log('Nhận frank-done từ ' + nameOf(el) + (t ? ', sau ' + Math.round(now() - t).toLocaleString('vi-VN') + ' ms' : ''), 'done');
+        });
+
+        /* ---------- trạng thái từ trang cha ---------- */
+        var state = { bg: 'light', size: 160, backdrop: 'dark', speed: 1, lightning: true, badge: 'bottom-right', badgeSize: 72 };
+        var sample = document.getElementById('sample');
+        var main = null;
+
+        function sizeAttr() { return 'min(' + state.size + 'px, 88vw)'; }
+        function makeMain() {
+          if (main) main.remove();
+          sample.textContent = '';
+          main = document.createElement('frank-seal-spinner');
+          main.setAttribute('size', sizeAttr());
+          main.setAttribute('backdrop', state.backdrop);
+          main.setAttribute('speed', String(state.speed));
+          main.setAttribute('label', 'Spinner mẫu');
+          if (fd.v === '3d' && !state.lightning) main.setAttribute('lightning', 'false');
+          names.set(main, 'spinner mẫu');
+          sample.appendChild(main);
+        }
+
+        var badge = null;
+        function applyBadge() {
+          if (badge) { badge.remove(); badge = null; }
+          // chừa chỗ cho huy hiệu cố định để nó không che nút trong khung hẹp
+          var room = state.badge === 'none' ? '' : state.badgeSize + 24 + 'px';
+          document.body.style.paddingTop = state.badge.indexOf('top') === 0 ? room : '';
+          document.body.style.paddingBottom = state.badge.indexOf('bottom') === 0 ? room : '';
+          if (state.badge === 'none') return;
+          badge = document.createElement('frank-badge');
+          badge.setAttribute('href', '#');
+          badge.setAttribute('size', String(state.badgeSize));
+          badge.setAttribute('position', state.badge);
+          badge.setAttribute('label', 'Huy hiệu FRANK DEVELOP (bản thử)');
+          badge.addEventListener('click', function (e) { e.preventDefault(); log('Bấm vào huy hiệu (liên kết thử, không chuyển trang)'); });
+          document.body.appendChild(badge);
+        }
+
+        function applyState(next, first) {
+          var prev = state;
+          state = Object.assign({}, state, next);
+          document.documentElement.dataset.bg = state.bg;
+          var rebuild = first || !main || prev.backdrop !== state.backdrop || prev.speed !== state.speed || prev.lightning !== state.lightning;
+          if (rebuild) makeMain();
+          else if (prev.size !== state.size && main && main.isConnected) main.setAttribute('size', sizeAttr());
+          if (first || prev.badge !== state.badge || prev.badgeSize !== state.badgeSize) applyBadge();
+        }
+
+        /* ---------- tình huống ---------- */
+        var cardBusy = false;
+        async function loadCard(ms) {
+          if (cardBusy) return log('Thẻ đang tải, bỏ qua lệnh mới', 'warn');
+          cardBusy = true;
+          var card = document.getElementById('card');
+          card.classList.add('busy');
+          var s = FrankSeal.spinner(card, { backdrop: state.backdrop, speed: state.speed, label: 'Đang tải thẻ' });
+          names.set(s, 'thẻ');
+          log('Tải thẻ: giả lập chờ ' + (ms / 1000).toLocaleString('vi-VN') + ' s');
+          await wait(ms);
+          await s.done({ hide: true });
+          card.classList.remove('busy');
+          document.getElementById('card-text').textContent = 'Đã tải xong lúc ' + new Date().toLocaleTimeString('vi-VN') + '.';
+          log('Thẻ đã hiện nội dung, spinner đã tự gỡ', 'done');
+          cardBusy = false;
+        }
+
+        var saveBtn = document.getElementById('save');
+        saveBtn.addEventListener('click', async function () {
+          if (saveBtn.disabled) return;
+          saveBtn.disabled = true;
+          saveBtn.setAttribute('aria-busy', 'true');
+          var s = FrankSeal.spinner(saveBtn, { size: 22, backdrop: 'none', speed: state.speed, label: 'Đang lưu' });
+          names.set(s, 'nút Lưu');
+          saveBtn.prepend(s);
+          saveBtn.lastChild.textContent = 'Đang lưu';
+          log('Nút Lưu: bắt đầu lưu (2 s)');
+          await wait(2000);
+          await s.done({ hide: true });
+          saveBtn.lastChild.textContent = 'Lưu thay đổi';
+          saveBtn.disabled = false;
+          saveBtn.removeAttribute('aria-busy');
+        });
+
+        async function cover(ms) {
+          var c = FrankSeal.overlay({ minDuration: ms, speed: state.speed, label: 'Đang tải trang' });
+          c.element.setAttribute('data-fd-cover', '');
+          names.set(c.spinner, 'lớp phủ');
+          log('Phủ cả trang, gọi hide() ngay; lớp phủ ở ít nhất ' + (ms / 1000).toLocaleString('vi-VN') + ' s');
+          await c.hide();
+          log('Lớp phủ đã rời đi', 'done');
+        }
+
+        // lớp phủ data-auto (nếu có) đã được tạo trước khi đoạn này chạy
+        function autoCover() {
+          if (!window.FrankSealOverlay || names.has(window.FrankSealOverlay.spinner)) return;
+          names.set(window.FrankSealOverlay.spinner, 'lớp phủ data-auto');
+          log('Lớp phủ data-auto đang che trang, sẽ rời đi sau sự kiện load');
+        }
+        autoCover();
+        document.addEventListener('DOMContentLoaded', autoCover);
+
+        window.addEventListener('message', function (e) {
+          var m = e.data;
+          if (!m || m.fd !== 1 || e.source !== window.parent) return;
+          if (m.cmd === 'state') applyState(m.state, m.first);
+          else if (m.cmd === 'done') {
+            if (main && main.isConnected) main.done();
+          } else if (m.cmd === 'restart') { calls = new WeakMap(); makeMain(); log('Chạy lại spinner mẫu'); }
+          else if (m.cmd === 'card') loadCard(m.ms);
+          else if (m.cmd === 'button') saveBtn.click();
+          else if (m.cmd === 'overlay') cover(m.ms);
+          else if (m.cmd === 'reset') { minFps = Infinity; jank = 0; worst = 0; warmUntil = now() + 500; }
+        });
+
+        /* ---------- FPS, số spinner, canvas ---------- */
+        var frames = 0, last = now(), prevFrame = now(), minFps = Infinity, jank = 0, worst = 0, fps = 0;
+        var startUntil = now() + 1500; // bỏ qua lúc trang vừa mở
+        var warmUntil = startUntil; // FPS thấp nhất còn bỏ qua 1,2 s sau mỗi lần tạo spinner (lúc dựng; vẫn tính vào khung giật)
+        new MutationObserver(function (list) {
+          list.forEach(function (r) {
+            r.addedNodes.forEach(function (n) {
+              if (n.nodeType === 1 && (n.localName === 'frank-seal-spinner' || n.querySelector('frank-seal-spinner'))) warmUntil = Math.max(warmUntil, now() + 1200);
+            });
+          });
+        }).observe(document.body, { childList: true, subtree: true });
+        function tick(t) {
+          frames++;
+          if (t > startUntil) { if (t - prevFrame > 50) jank++; if (t - prevFrame > worst) worst = t - prevFrame; }
+          prevFrame = t;
+          if (t - last >= 500) {
+            fps = (frames * 1000) / (t - last);
+            if (t > warmUntil && fps < minFps) minFps = fps;
+            frames = 0;
+            last = t;
+            report();
+          }
+          requestAnimationFrame(tick);
+        }
+        function report() {
+          var all = Array.prototype.slice.call(document.querySelectorAll('frank-seal-spinner'));
+          var busy = all.filter(function (s) { return s.getAttribute('aria-busy') !== 'false'; }).length;
+          var canvases = 0;
+          all.forEach(function (s) { if (s.shadowRoot) canvases += s.shadowRoot.querySelectorAll('canvas').length; });
+          fd.send({
+            type: 'metrics',
+            fps: fps,
+            minFps: isFinite(minFps) ? minFps : null,
+            jank: jank,
+            worst: worst,
+            spinners: all.length,
+            busy: busy,
+            canvases: canvases,
+            licensed: !document.querySelector('frank-seal-spinner') || !document.querySelector('frank-seal-spinner').shadowRoot.querySelector('.unlic'),
+          });
+        }
+
+        window.addEventListener('load', function () {
+          loadReport();
+          requestAnimationFrame(tick);
+        });
+        fd.send({ type: 'ready' });
+      })();
+    </script>
+  </body>
+</html>

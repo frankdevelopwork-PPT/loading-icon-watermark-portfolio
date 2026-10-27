@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- FRANK DEVELOP seal mark: gold rim with studs, jade dial, the F monogram in a double lozenge -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbe9b0"/>
+      <stop offset=".45" stop-color="#e2b65e"/>
+      <stop offset="1" stop-color="#a8752c"/>
+    </linearGradient>
+    <radialGradient id="bg" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#14101f"/>
+      <stop offset="1" stop-color="#05040a"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="31.5" fill="url(#bg)"/>
+  <circle cx="32" cy="32" r="28.6" fill="none" stroke="url(#g)" stroke-width="2.4"/>
+  <g fill="url(#g)">
+    <path d="M32 0.8l1.6 3.2-1.6 3.2-1.6-3.2z"/>
+    <path d="M32 56.8l1.6 3.2-1.6 3.2-1.6-3.2z"/>
+    <path d="M0.8 32l3.2-1.6 3.2 1.6-3.2 1.6z"/>
+    <path d="M56.8 32l3.2-1.6 3.2 1.6-3.2 1.6z"/>
+  </g>
+  <circle cx="32" cy="32" r="24.6" fill="none" stroke="#8fe0bd" stroke-width="1.3" stroke-dasharray="36 5.5" transform="rotate(-80 32 32)"/>
+  <path d="M32 15.2L48.8 32 32 48.8 15.2 32z" fill="#07060d" stroke="url(#g)" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M32 19.6L44.4 32 32 44.4 19.6 32z" fill="none" stroke="#8fe0bd" stroke-width="1"/>
+  <path transform="translate(27.1 25)" fill="url(#g)" d="M0.6 0H9.8V3.8H8.9Q8.6 1.9 6.8 1.8H4.4V6.1H6.6Q7.3 6.1 7.4 5H8.1V8.8H7.4Q7.3 7.7 6.6 7.7H4.4V12.3Q4.4 12.8 5.2 12.9H6V14H0.6V12.9H1.4Q2 12.8 2 12.3V1.7Q2 1.2 1.4 1.1H0.6Z"/>
+</svg>

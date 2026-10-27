@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 16 px version of favicon.svg: thick gold rim and a large F only, so it stays legible -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbe9b0"/>
+      <stop offset=".5" stop-color="#e8bd62"/>
+      <stop offset="1" stop-color="#b8853a"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="31" fill="#07060d"/>
+  <circle cx="32" cy="32" r="27.5" fill="none" stroke="url(#g)" stroke-width="5"/>
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#8fe0bd" stroke-width="2.4"/>
+  <path transform="translate(21.2 16.6) scale(2.2)" fill="url(#g)" d="M0.6 0H9.8V3.8H8.9Q8.6 1.9 6.8 1.8H4.4V6.1H6.6Q7.3 6.1 7.4 5H8.1V8.8H7.4Q7.3 7.7 6.6 7.7H4.4V12.3Q4.4 12.8 5.2 12.9H6V14H0.6V12.9H1.4Q2 12.8 2 12.3V1.7Q2 1.2 1.4 1.1H0.6Z"/>
+</svg>
