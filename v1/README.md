@@ -8,10 +8,10 @@ Bản build: 2026-10-27 · © 2026 FRANK DEVELOP. Xem `LICENSE.txt` trước khi
 
 | File | Là gì | Dung lượng |
 |---|---|---|
-| `frank-seal-spinner-2d.js` | Spinner, bản 2D (vector SVG) | 64 kB (22 kB gzip) |
+| `frank-seal-spinner-2d.js` | Spinner, bản 2D (vector SVG) | 62 kB (21 kB gzip) |
 | `frank-seal-spinner.js` | Spinner, bản ảnh (vòng render từ cảnh 3D) | 519 kB (377 kB gzip) |
 | `frank-seal-spinner-3d.js` | Spinner, bản 3D (WebGL) | 1,08 MB (274 kB gzip) |
-| `frank-badge-2d.js` | Huy hiệu, bản 2D | 60 kB (20 kB gzip) |
+| `frank-badge-2d.js` | Huy hiệu, bản 2D | 58 kB (19 kB gzip) |
 | `frank-badge.js` | Huy hiệu, bản ảnh | 244 kB (172 kB gzip) |
 | `icons/`, `site.webmanifest` | Favicon (SVG, ICO, PNG 16/32), icon iPhone 180, Android 192/512 và maskable | |
 | `demo.html`, `playground.html` | Trang mẫu và phòng thử | |
@@ -33,7 +33,7 @@ Cả ba bản spinner cùng thẻ HTML và cùng lệnh JS: đổi bản chỉ c
 
 Spinner và huy hiệu chỉ hiển thị bình thường trên các tên miền sau (gồm cả tên miền con), và khi mở file trực tiếp trên máy (`file://`):
 
-- `https://frankdevelopwork-ppt.github.io`
+- `frankdevelopwork-ppt.github.io`
 - `localhost`
 - `127.0.0.1`
 
