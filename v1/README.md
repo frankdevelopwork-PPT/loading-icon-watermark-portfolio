@@ -149,6 +149,20 @@ Nếu bộ kit được đặt trên một địa chỉ web cố định, trang 
 - Tên miền của **trang đang dùng kit** phải nằm trong danh sách được phép ở trên (nơi đặt file thì không cần).
 - Trang dùng kit cần có mạng để tải file. Icon (mục 4) nên chép vào từng trang.
 
+## Prompt tích hợp mẫu
+
+Dán đoạn sau cho trợ lý AI (Claude…) ở dự án cần gắn kit:
+
+```text
+Tích hợp kit FRANK DEVELOP (bản 2D) vào dự án này. Hướng dẫn đầy đủ ở https://frankdevelopwork-ppt.github.io/loading-icon-watermark-portfolio/v1/README.md (đọc trước khi làm).
+- Nạp trực tiếp từ địa chỉ trên, KHÔNG tải file về, KHÔNG sửa nội dung file JS (mã đã làm rối và tự bảo vệ).
+- Huy hiệu: <script src="https://frankdevelopwork-ppt.github.io/loading-icon-watermark-portfolio/v1/frank-badge-2d.js" defer></script> và <frank-badge position="bottom-right"></frank-badge>.
+- Loading (nếu cần): https://frankdevelopwork-ppt.github.io/loading-icon-watermark-portfolio/v1/frank-seal-spinner-2d.js; mỗi trang chỉ nạp một bản spinner.
+- Spinner/huy hiệu chỉ hiện đủ màu trên các tên miền đã được cấp phép (hiện có frankdevelopwork-ppt.github.io, localhost, 127.0.0.1). Nếu hiện xám kèm "© FRANK DEVELOP" thì báo lại để tôi cấp phép tên miền, đừng tìm cách vượt qua.
+```
+
+Muốn dùng bản ảnh (có watermark ẩn) thay cho bản 2D: đổi `frank-badge-2d.js` thành `frank-badge.js` và `frank-seal-spinner-2d.js` thành `frank-seal-spinner.js`. Bản 2D không có watermark ẩn (không chứa ảnh), chỉ có dòng bản quyền, khóa tên miền và làm rối mã.
+
 ## Xem thử
 
 - `demo.html`: các cách dùng (lớp phủ, nhiều cỡ, trong nút, trong thẻ, huy hiệu). Thêm `?2d` hoặc `?3d` để xem bản khác.
